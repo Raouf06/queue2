@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import io from 'socket.io-client';
 
 const getIcon = (status) => {
     switch (status) {
@@ -64,18 +65,47 @@ function MapScreen() {
   );
 }
 
-// List Screen
 function ListScreen() {
+  const [peopleCount, setPeopleCount] = useState(null); // Store the number of people detected
+  const [isConnected, setIsConnected] = useState(false); // Track WebSocket connection status
+
   const atmData = [
     { id: 1, status: 'green', text: 'ATM 1' },
     { id: 2, status: 'orange', text: 'ATM 2' },
     { id: 3, status: 'red', text: 'ATM 3' },
   ];
 
+  useEffect(() => {
+    // Connect to the WebSocket server
+    const socket = io('http://192.168.32.143:5000');
+   
+    // Listen for WebSocket events
+    socket.on('connect', () => {
+      console.log('Connected!');
+      setIsConnected(true);
+    });
+
+    socket.on('people_count', (data) => {
+      console.log(data); // Print the live feed data
+      setPeopleCount(data.count); // Update the state with the new count
+    });
+
+    // Cleanup the socket connection when the component unmounts
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  const handleItemPress = (atmId) => {
+    console.log(`ATM ${atmId} clicked`);
+    // You can add logic here to display the live feed for the selected ATM, if needed
+    alert(`People detected in ATM ${atmId}: ${peopleCount}`);
+  };
+
   return (
     <View style={styles.listContainer}>
       {atmData.map((atm) => (
-        <View key={atm.id} style={styles.listItem}>
+        <TouchableOpacity key={atm.id} onPress={() => handleItemPress(atm.id)} style={styles.listItem}>
           <Icon
             name="bank"
             size={24}
@@ -89,8 +119,13 @@ function ListScreen() {
             style={styles.listIcon}
           />
           <Text style={styles.listText}>{atm.text}</Text>
-        </View>
+        </TouchableOpacity>
       ))}
+      {isConnected && peopleCount !== null && (
+        <Text style={styles.liveFeedText}>
+          People detected: {peopleCount}
+        </Text>
+      )}
     </View>
   );
 }
@@ -170,15 +205,8 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
   },
-  contentContainer: {
-    flex: 1,
-  },
   mapContainer: {
     flex: 1,
-  },
-  listContainer: {
-    flex: 1,
-    padding: 20,
   },
   listItem: {
     flexDirection: 'row',
@@ -190,5 +218,30 @@ const styles = StyleSheet.create({
   },
   listText: {
     fontSize: 16,
+  },
+
+  listContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
+  },
+  listIcon: {
+    marginRight: 10,
+  },
+  listText: {
+    fontSize: 18,
+  },
+  liveFeedText: {
+    marginTop: 20,
+    fontSize: 20,
+    textAlign: 'center',
+    color: 'blue',
   },
 });
