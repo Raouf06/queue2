@@ -65,20 +65,28 @@ function MapScreen() {
   );
 }
 
+// List Screen
 function ListScreen() {
   const [peopleCount, setPeopleCount] = useState(null); // Store the number of people detected
   const [isConnected, setIsConnected] = useState(false); // Track WebSocket connection status
-
-  const atmData = [
+  const [atmData, setAtmData] = useState([
     { id: 1, status: 'green', text: 'ATM 1' },
     { id: 2, status: 'orange', text: 'ATM 2' },
     { id: 3, status: 'red', text: 'ATM 3' },
-  ];
+  ]);
+
+  // Function to update ATM status
+  const updateAtmStatus = (id, newStatus) => {
+    setAtmData((prevAtmData) =>
+      prevAtmData.map((atm) =>
+        atm.id === id ? { ...atm, status: newStatus } : atm
+      )
+    );
+  };
 
   useEffect(() => {
     // Connect to the WebSocket server
-    const socket = io('http://192.168.32.143:5000');
-   
+    const socket = io('http://192.168.32.143:5000',{query:{id:"ATM1"}});
     // Listen for WebSocket events
     socket.on('connect', () => {
       console.log('Connected!');
@@ -86,6 +94,17 @@ function ListScreen() {
     });
 
     socket.on('people_count', (data) => {
+      for(i=1;i<4; i++){
+        var count = data["ATM"+i];
+        if (count < 5){
+          updateAtmStatus(i, 'green');
+        } else if (count < 10) {
+          updateAtmStatus(i, 'orange');
+        } else {
+          updateAtmStatus(i, 'red');
+        }
+      }
+      //updateAtmStatus(i, 'green'); // Changes ATM 2's status to 'green'
       console.log(data); // Print the live feed data
       setPeopleCount(data.count); // Update the state with the new count
     });
@@ -99,7 +118,7 @@ function ListScreen() {
   const handleItemPress = (atmId) => {
     console.log(`ATM ${atmId} clicked`);
     // You can add logic here to display the live feed for the selected ATM, if needed
-    alert(`People detected in ATM ${atmId}: ${peopleCount}`);
+    alert(`People detected in ATM 1: 15`);
   };
 
   return (
@@ -121,11 +140,6 @@ function ListScreen() {
           <Text style={styles.listText}>{atm.text}</Text>
         </TouchableOpacity>
       ))}
-      {isConnected && peopleCount !== null && (
-        <Text style={styles.liveFeedText}>
-          People detected: {peopleCount}
-        </Text>
-      )}
     </View>
   );
 }
@@ -205,8 +219,15 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
   },
+  contentContainer: {
+    flex: 1,
+  },
   mapContainer: {
     flex: 1,
+  },
+  listContainer: {
+    flex: 1,
+    padding: 20,
   },
   listItem: {
     flexDirection: 'row',
@@ -218,25 +239,6 @@ const styles = StyleSheet.create({
   },
   listText: {
     fontSize: 16,
-  },
-
-  listContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 5,
-  },
-  listIcon: {
-    marginRight: 10,
-  },
-  listText: {
-    fontSize: 18,
   },
   liveFeedText: {
     marginTop: 20,
